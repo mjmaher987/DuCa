@@ -91,7 +91,7 @@ sample images for **visualization**
 
 ```bash
 cd PixArt-alpha-ToCa
-python scripts/inference.py --model_path /root/autodl-tmp/pretrained_models/PixArt-XL-2-256x256.pth --image_size 256 --bs 100 --txt_file /root/autodl-tmp/test.txt --fresh_threshold 3 --fresh_ratio 0.30 --cache_type attention --force_fresh global --soft_fresh_weight 0.25 --ratio_scheduler ToCa
+python scripts/inference.py --model_path /root/autodl-tmp/pretrained_models/PixArt-XL-2-256x256.pth --image_size 256 --bs 100 --txt_file /root/autodl-tmp/test.txt --fresh_threshold 3 --fresh_ratio 0.75 --cache_type attention --force_fresh global --soft_fresh_weight 0.25 --ratio_scheduler ToCa
 ```
 
 sample images for **evaluation** (e.g 30k for COCO, 1.6k for PartiPrompts)
