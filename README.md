@@ -48,21 +48,21 @@ Besides, we provide a replica for our environment here
 ##### DiT
 
 ```bash
-cd DiT-ToCa
+cd DuCa-DiT
 conda env create -f environment-dit.yml
 ```
 
 ##### PixArt-α
 
 ```bash
-cd PixArt-alpha-ToCa
+cd DuCa-PixArt-alpha
 conda env create -f environment-pixart.yml
 ```
 
 ##### OpenSora
 
 ```bash
-cd Open-Sora
+cd DuCa-Open-Sora
 conda env create -f environment-opensora.yml
 pip install -v . # for development mode, `pip install -v -e .`
 ```
@@ -74,14 +74,14 @@ pip install -v . # for development mode, `pip install -v -e .`
 sample images for **visualization**
 
 ```bash
-cd DiT-ToCa
+cd DuCa-DiT
 python sample.py --image-size 256 --num-sampling-steps 50 --cache-type attention --fresh-threshold 3 --fresh-ratio 0.05 --ratio-scheduler ToCa  --force-fresh global --soft-fresh-weight 0.25 --ddim-sample
 ```
 
 sample images for **evaluation** (e.g 50k)
 
 ```bash
-cd DiT-ToCa
+cd DuCa-DiT
 torchrun --nnodes=1 --nproc_per_node=6 sample_ddp.py --model DiT-XL/2 --per-proc-batch-size 150 --image-size 256 --cfg-scale 1.5 --num-sampling-steps 50 --cache-type attention --fresh-ratio 0.05 --ratio-scheduler ToCa --force-fresh global --fresh-threshold 3 --ddim-sample --soft-fresh-weight 0.25 --num-fid-samples 50000
 ```
 
@@ -90,14 +90,14 @@ torchrun --nnodes=1 --nproc_per_node=6 sample_ddp.py --model DiT-XL/2 --per-proc
 sample images for **visualization**
 
 ```bash
-cd PixArt-alpha-ToCa
+cd DuCa-PixArt-alpha
 python scripts/inference.py --model_path /root/autodl-tmp/pretrained_models/PixArt-XL-2-256x256.pth --image_size 256 --bs 100 --txt_file /root/autodl-tmp/test.txt --fresh_threshold 3 --fresh_ratio 0.75 --cache_type attention --force_fresh global --soft_fresh_weight 0.25 --ratio_scheduler ToCa
 ```
 
 sample images for **evaluation** (e.g 30k for COCO, 1.6k for PartiPrompts)
 
 ```bash
-cd PixArt-alpha-ToCa
+cd DuCa-PixArt-alpha
 torchrun --nproc_per_node=6 scripts/inference_ddp.py --model_path /root/autodl-tmp/pretrained_models/PixArt-XL-2-256x256.pth --image_size 256 --bs 100 --txt_file /root/autodl-tmp/COCO/COCO_caption_prompts_30k.txt --fresh_threshold 3 --fresh_ratio 0.75 --cache_type attention --force_fresh global --soft_fresh_weight 0.25 --ratio_scheduler ToCa
 ```
 
@@ -106,14 +106,14 @@ torchrun --nproc_per_node=6 scripts/inference_ddp.py --model_path /root/autodl-t
 sample video for **visualizaiton**
 
 ```bash
-cd Open-Sora
+cd DuCa-Open-Sora
 python scripts/inference.py configs/opensora-v1-2/inference/sample.py  --num-frames 2s --resolution 480p --aspect-ratio 9:16   --prompt "a beautiful waterfall"
 ```
 
 sample video for **VBench evaluation**
 
 ```bash
-cd Open-Sora
+cd DuCa-Open-Sora
 bash eval/vbench/launch.sh /root/autodl-tmp/pretrained_models/hpcai-tech/OpenSora-STDiT-v3/model.safetensors 51 opensora-ToCa 480p 9:16
 ```
 
