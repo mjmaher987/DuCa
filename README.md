@@ -22,7 +22,7 @@ CUDA>=11.8
 ## 🛠 Installation
 
 ``` cmd
-git clone https://github.com/Shenyi-Z/ToCa.git
+git clone https://github.com/Shenyi-Z/DuCa.git
 ```
 
 ### Environment Settings
