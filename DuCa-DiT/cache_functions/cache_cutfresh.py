@@ -1,6 +1,6 @@
 from .fresh_ratio_scheduler import fresh_ratio_scheduler
 from .score_evaluate import score_evaluate
-from .token_merge import token_merge
+#from .token_merge import token_merge
 import torch
 def cache_cutfresh(cache_dic, tokens, current):
     '''
