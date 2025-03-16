@@ -17,7 +17,8 @@ import math
 from timm.models.vision_transformer import PatchEmbed, Mlp
 #import os.path as osp
 from cache_functions import global_force_fresh, cache_cutfresh, update_cache, force_init, Attention, cal_type
-
+# mport math
+from timm.models.vision_transformer import Attention as NormalAttention
 
 def modulate(x, shift, scale):
     return x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
@@ -171,6 +172,7 @@ class DiTBlock(nn.Module):
         super().__init__()
         self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         self.attn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True, **block_kwargs)
+        # self.norm_attn = NormalAttention(hidden_size, num_heads=num_heads, qkv_bias=True, **block_kwargs)
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         mlp_hidden_dim = int(hidden_size * mlp_ratio)
         approx_gelu = lambda: nn.GELU(approximate="tanh")
@@ -181,8 +183,14 @@ class DiTBlock(nn.Module):
         )
 
     def forward(self, x, c, current, cache_dic):
-        B, N, C = x.shape  # 获取输入 x 的 shape
 
+        if current == None:
+            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
+            x = x + gate_msa.unsqueeze(1) *  self.attn(modulate(self.norm1(x), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
+            x = x + gate_mlp.unsqueeze(1) * self.mlp(modulate(self.norm2(x), shift_mlp, scale_mlp))
+            return x
+        
+        B, N, C = x.shape  # 获取输入 x 的 shape
         cache_type = cache_dic['cache_type']
         layer = current['layer']
 
@@ -463,7 +471,7 @@ class DiT(nn.Module):
         imgs = x.reshape(shape=(x.shape[0], c, h * p, h * p))
         return imgs
 
-    #def forward(self, x, t, y):
+    # def forward_nocache(self, x, t, y):
     #    """
     #    Forward pass of DiT.
     #    x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -494,7 +502,8 @@ class DiT(nn.Module):
         c = t + y                                # (N, D)
 
         for layeridx, block in enumerate(self.blocks):
-            current['layer'] = layeridx
+            if current != None:
+                current['layer'] = layeridx
             x = block(x, c, current, cache_dic)                      # (N, T, D)
 
         x = self.final_layer(x, c)                # (N, T, patch_size ** 2 * out_channels)
@@ -510,17 +519,25 @@ class DiT(nn.Module):
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
         half = x[: len(x) // 2]
         combined = torch.cat([half, half], dim=0)
-        #model_out = self.forward(combined, t, y)
-        model_out = self.forward(combined, t, current, cache_dic, y)
+        model_out_nocache = self.forward(combined, t, None, None, y)
+        model_out_guide = self.forward(combined, t, current, cache_dic, y)
+        # model_out2 = self.forward(half, t, current, cache_dic, y)
         # For exact reproducibility reasons, we apply classifier-free guidance on only
         # three channels by default. The standard approach to cfg applies it to all channels.
         # This can be done by uncommenting the following line and commenting-out the line following that.
         # eps, rest = model_out[:, :self.in_channels], model_out[:, self.in_channels:]
-        eps, rest = model_out[:, :3], model_out[:, 3:]
-        cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)
-        half_eps = uncond_eps + cfg_scale * (cond_eps - uncond_eps)
+        # eps_nocache, rest_nocache = model_out_nocache[:, :3], model_out_nocache[:, 3:]
+        # eps, rest = model_out_guide[:, :3], model_out_guide[:, 3:]
+        eps_nocache = model_out_nocache
+        eps_guide = model_out_guide
+
+        first_eps_nocache, second_eps_nocache = torch.split(eps_nocache, len(eps_nocache) // 2, dim=0)
+        first_eps_guide, second_eps_guide = torch.split(eps_guide, len(eps_guide) // 2, dim=0)
+
+        half_eps = first_eps_guide + cfg_scale * (first_eps_nocache - first_eps_guide)
         eps = torch.cat([half_eps, half_eps], dim=0)
-        return torch.cat([eps, rest], dim=1)
+        return eps
+        # return torch.cat([eps, rest], dim=1)
     
 
 

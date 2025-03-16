@@ -1,0 +1,33 @@
+aiohttp==3.9.5
+aiosignal==1.2.0
+# arrow-cpp
+bottleneck==1.3.7
+brotli==1.0.9
+certifi==2024.7.4
+cffi==1.16.0
+charset-normalizer==2.0.4
+cryptography==42.0.5
+datasets==2.19.1
+diffusers==0.18.2
+dill==0.3.8
+# huggingface-accelerate
+huggingface-hub==0.23.1
+idna==3.7
+importlib-metadata==7.0.1
+jinja2==3.1.4
+mpmath==1.3.0
+multiprocess==0.70.15
+numpy
+pandas
+protobuf
+# pytorch
+requests
+torch
+torchvision
+torchaudio
+transformers
+tqdm
+scipy
+scikit-learn
+matplotlib
+opencv-python
