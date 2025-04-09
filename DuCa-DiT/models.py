@@ -534,7 +534,7 @@ class DiT(nn.Module):
         first_eps_nocache, second_eps_nocache = torch.split(eps_nocache, len(eps_nocache) // 2, dim=0)
         first_eps_guide, second_eps_guide = torch.split(eps_guide, len(eps_guide) // 2, dim=0)
 
-        half_eps = first_eps_guide + cfg_scale * (first_eps_nocache - first_eps_guide)
+        half_eps = first_eps_nocache + cfg_scale * (first_eps_nocache - second_eps_guide) + cfg_scale * (first_eps_nocache - second_eps_nocache)
         eps = torch.cat([half_eps, half_eps], dim=0)
         return eps
         # return torch.cat([eps, rest], dim=1)
