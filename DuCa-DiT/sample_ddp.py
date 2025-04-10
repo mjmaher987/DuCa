@@ -56,7 +56,9 @@ def main(args):
     device = rank % torch.cuda.device_count()
     seed = args.global_seed * dist.get_world_size() + rank
     torch.manual_seed(seed)
+
     torch.cuda.set_device(device)
+
     print(f"Starting rank={rank}, seed={seed}, world_size={dist.get_world_size()}.")
 
     if args.ckpt is None:
@@ -134,7 +136,10 @@ def main(args):
         model_kwargs['ratio_scheduler']   = args.ratio_scheduler
         model_kwargs['soft_fresh_weight'] = args.soft_fresh_weight
         model_kwargs['test_FLOPs']        = args.test_FLOPs
-        
+
+        model_kwargs['f'] = args.f
+        model_kwargs['t'] = args.t
+        model_kwargs['s'] = args.s
 
         # Sample images:
         if args.ddim_sample:
@@ -169,6 +174,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("-f", type=int, default=6)
+    parser.add_argument("-t", type=int, default=4)
+    parser.add_argument("-s", type=int, default=12)
+
     parser.add_argument("--model", type=str, choices=list(DiT_models.keys()), default="DiT-XL/2")
     parser.add_argument("--vae",  type=str, choices=["ema", "mse"], default="ema")
     parser.add_argument("--sample-dir", type=str, default="samples") # Change this to your desired sample directory

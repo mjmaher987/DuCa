@@ -10,14 +10,18 @@ def cal_type(cache_dic, current):
     else:
         fresh_interval = cache_dic['fresh_threshold']
 
-    if (current['step'] % 6 == 0) or first_step:
+    f = cache_dic['f']
+    t = cache_dic['t']
+    s = cache_dic['s']
+
+    if (current['step'] % f == 0) or first_step:
         current['type'] = 'full'
         
-    elif (current['step'] % 4 == 0): #[1,3,5] [2,4,6]
+    elif (current['step'] % t == 0): #[1,3,5] [2,4,6]
         current['type'] = 'ToCa'
 
     # 'aggressive' 'ToCa' 'FORA' 'Residual'
-    elif current['step'] % 12 == 1:
+    elif current['step'] % s == 1:
         current['type'] = "skipped"
     else: 
         current['type'] = 'aggressive'

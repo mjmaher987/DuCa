@@ -28,6 +28,10 @@ def cache_init(model_kwargs, num_steps):
     cache_dic['soft_fresh_weight']    = model_kwargs['soft_fresh_weight']
     cache_dic['flops']                = 0.0
     cache_dic['test_FLOPs']           = model_kwargs['test_FLOPs'] 
+
+    cache_dic['f'] = model_kwargs['f']
+    cache_dic['t'] = model_kwargs['t']
+    cache_dic['s'] = model_kwargs['s']
     
     cache_dic['cache'][-1]['noise_steps'] = {}
     
