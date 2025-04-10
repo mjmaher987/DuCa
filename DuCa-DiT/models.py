@@ -205,10 +205,15 @@ class DiTBlock(nn.Module):
         cache_dic['residual_start'] = 0
         cache_dic['residual_end']   = 27
 
+        x_original = x[: len(x) // 2]
+        x_guide = x[len(x) // 2:]
+
+        # current['type'] = 'Residual'
+
         if current['type'] == 'full':  # Force Activation: Compute all tokens and save them in cache
             
             if cache_dic['res_enable'] and (current['layer'] == cache_dic['residual_start']):
-                cache_dic['cache'][-1]['x_base'] = x
+                cache_dic['cache'][-1]['x_base'] = x_guide
             
             # AdaLN Modulation
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
@@ -225,16 +230,16 @@ class DiTBlock(nn.Module):
             current['module'] = 'attn'
             attn_output, attn_map = self.attn(modulate(self.norm1(x), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
             #cache_dic['cache'][-1][layer]['attn'] = attn_output * gate_msa.unsqueeze(1)
-            cache_dic['cache'][-1][layer]['attn'] = attn_output
-            cache_dic['attn_map'][-1][layer] = attn_map
-            force_init(cache_dic, current, x)
+            cache_dic['cache'][-1][layer]['attn'] = attn_output[len(attn_output) // 2:]
+            cache_dic['attn_map'][-1][layer] = attn_map[len(attn_map) // 2:]
+            force_init(cache_dic, current, x_guide)
             x = x + gate_msa.unsqueeze(1) * attn_output
 
             current['module'] = 'mlp'
             mlp_output = self.mlp(modulate(self.norm2(x), shift_mlp, scale_mlp))
             #cache_dic['cache'][-1][layer]['mlp'] = mlp_output * gate_mlp.unsqueeze(1)
-            cache_dic['cache'][-1][layer]['mlp'] = mlp_output
-            force_init(cache_dic, current, x)
+            cache_dic['cache'][-1][layer]['mlp'] = mlp_output[len(mlp_output) // 2:]
+            force_init(cache_dic, current, x_guide)
             x = x + gate_mlp.unsqueeze(1) * mlp_output
 
             # MLP FLOPs
@@ -245,12 +250,12 @@ class DiTBlock(nn.Module):
                 flops += B * N * mlp_hidden_dim * 6 # GELU activation
 
             if cache_dic['res_enable'] and (current['layer'] == cache_dic['residual_end']):
-                cache_dic['cache'][-1]['res'] = x - cache_dic['cache'][-1]['x_base']
+                cache_dic['cache'][-1]['res'] = x_guide - cache_dic['cache'][-1]['x_base']
 
         elif current['type'] == 'ToCa':  # Partial Computation: Compute only fresh tokens and save them in cache, no attention token computation in the final version
             
             if cache_dic['res_enable'] and (current['layer'] == cache_dic['residual_start']):
-                cache_dic['cache'][-1]['x_base'] = x
+                cache_dic['cache'][-1]['x_base'] = x_guide
             
             # AdaLN Modulation
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
@@ -265,13 +270,21 @@ class DiTBlock(nn.Module):
                 flops += B * C * 6 * C  # Linear FLOPs in adaLN_modulation
 
             current['module'] = 'attn'
-            x = x + gate_msa.unsqueeze(1) * cache_dic['cache'][-1][layer]['attn']
+            attn_output_original, attn_map_original = self.attn(modulate(self.norm1(x_original), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
+
+            x_original = x_original + gate_msa.unsqueeze(1) * attn_output_original
+            x_guide = x_guide + gate_msa.unsqueeze(1) * cache_dic['cache'][-1][layer]['attn']
 
             current['module'] = 'mlp'
-            fresh_indices, fresh_tokens = cache_cutfresh(cache_dic, x, current)
+            fresh_indices, fresh_tokens = cache_cutfresh(cache_dic, x_guide, current)
             fresh_tokens = self.mlp(modulate(self.norm2(fresh_tokens), shift_mlp, scale_mlp))
             update_cache(fresh_indices, fresh_tokens=fresh_tokens, cache_dic=cache_dic, current=current)
-            x = x + gate_mlp.unsqueeze(1) * cache_dic['cache'][-1][layer]['mlp']
+
+            mlp_output_original = self.mlp(modulate(self.norm2(x_original), shift_mlp, scale_mlp))
+
+            x_original = x_original + gate_msa.unsqueeze(1) * mlp_output_original
+            x_guide = x_guide + gate_msa.unsqueeze(1) * cache_dic['cache'][-1][layer]['mlp']
+
             #x = x + cache_dic['cache'][-1][layer]['mlp']
 
             # MLP FLOPs for the 'else' branch
@@ -283,7 +296,7 @@ class DiTBlock(nn.Module):
                 flops += B_fresh * N_fresh * mlp_hidden_dim * 6 # GELU activation
 
             if cache_dic['res_enable'] and (current['layer'] == cache_dic['residual_end']):
-                cache_dic['cache'][-1]['res'] = x - cache_dic['cache'][-1]['x_base']
+                cache_dic['cache'][-1]['res'] = x_guide - cache_dic['cache'][-1]['x_base']
 
         elif current['type'] == 'FORA':
             
@@ -351,12 +364,15 @@ class DiTBlock(nn.Module):
                 x = cache_dic['cache'][-1]['x_base'] + cache_dic['cache'][-1]['res']
         
         else:
+            print("Module Skipp called")
             current['module'] = 'skipped'
             if current['layer'] == 27:
                 x = cache_dic['cache'][-1]['noise']
 
         cache_dic['flops'] += flops
 
+        x = torch.cat([x_original, x_guide], 0)
+        
         if current['layer'] == 27:
             cache_dic['cache'][-1]['noise'] = x
 
@@ -519,7 +535,7 @@ class DiT(nn.Module):
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
         half = x[: len(x) // 2]
         combined = torch.cat([half, half], dim=0)
-        model_out_nocache = self.forward(combined, t, None, None, y)
+        # model_out_nocache = self.forward(combined, t, None, None, y)
         model_out_guide = self.forward(combined, t, current, cache_dic, y)
         # model_out2 = self.forward(half, t, current, cache_dic, y)
         # For exact reproducibility reasons, we apply classifier-free guidance on only
@@ -528,13 +544,15 @@ class DiT(nn.Module):
         # eps, rest = model_out[:, :self.in_channels], model_out[:, self.in_channels:]
         # eps_nocache, rest_nocache = model_out_nocache[:, :3], model_out_nocache[:, 3:]
         # eps, rest = model_out_guide[:, :3], model_out_guide[:, 3:]
-        eps_nocache = model_out_nocache
-        eps_guide = model_out_guide
+        # eps_nocache = model_out_nocache
+        # eps_guide = model_out_guide
 
-        first_eps_nocache, second_eps_nocache = torch.split(eps_nocache, len(eps_nocache) // 2, dim=0)
-        first_eps_guide, second_eps_guide = torch.split(eps_guide, len(eps_guide) // 2, dim=0)
+        eps_original, eps_guide = torch.split(model_out_guide, len(model_out_guide) // 2, dim=0)
+        # first_eps_nocache, second_eps_nocache = torch.split(eps_nocache, len(eps_nocache) // 2, dim=0)
+        # first_eps_guide, second_eps_guide = torch.split(eps_guide, len(eps_guide) // 2, dim=0)
 
-        half_eps = first_eps_nocache + cfg_scale * (first_eps_nocache - second_eps_guide) + cfg_scale * (first_eps_nocache - second_eps_nocache)
+        half_eps = eps_original + cfg_scale * (eps_original - eps_guide)
+        # half_eps = first_eps_nocache + cfg_scale * (first_eps_nocache - second_eps_guide) + cfg_scale * (first_eps_nocache - second_eps_nocache)
         eps = torch.cat([half_eps, half_eps], dim=0)
         return eps
         # return torch.cat([eps, rest], dim=1)
