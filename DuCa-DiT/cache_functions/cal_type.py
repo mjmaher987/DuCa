@@ -17,7 +17,7 @@ def cal_type(cache_dic, current):
         current['type'] = 'ToCa'
 
     # 'aggressive' 'ToCa' 'FORA' 'Residual'
-    elif: current['step'] % 6 == 1:
+    elif current['step'] % 6 == 1:
         current['type'] = "skipped"
     else: 
         current['type'] = 'aggressive'
