@@ -231,7 +231,7 @@ class DiTBlock(nn.Module):
             attn_output, attn_map = self.attn(modulate(self.norm1(x), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
             #cache_dic['cache'][-1][layer]['attn'] = attn_output * gate_msa.unsqueeze(1)
             cache_dic['cache'][-1][layer]['attn'] = attn_output[len(attn_output) // 2:]
-            cache_dic['attn_map'][-1][layer] = attn_map[len(attn_map) // 2:]
+            # cache_dic['attn_map'][-1][layer] = attn_map[len(attn_map) // 2:]
             force_init(cache_dic, current, x_guide)
             x = x + gate_msa.unsqueeze(1) * attn_output
 
@@ -270,20 +270,20 @@ class DiTBlock(nn.Module):
                 flops += B * C * 6 * C  # Linear FLOPs in adaLN_modulation
 
             current['module'] = 'attn'
-            attn_output_original, attn_map_original = self.attn(modulate(self.norm1(x_original), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
+            attn_output_original, attn_map_original = self.attn(modulate(self.norm1(x_original), shift_msa[:len(shift_msa) // 2], scale_msa[:len(scale_msa) // 2]), cache_dic=cache_dic, current=current)
 
-            x_original = x_original + gate_msa.unsqueeze(1) * attn_output_original
-            x_guide = x_guide + gate_msa.unsqueeze(1) * cache_dic['cache'][-1][layer]['attn']
+            x_original = x_original + gate_msa[:len(gate_msa)//2].unsqueeze(1) * attn_output_original
+            x_guide = x_guide + gate_msa[len(gate_msa)//2:].unsqueeze(1) * cache_dic['cache'][-1][layer]['attn']
 
             current['module'] = 'mlp'
             fresh_indices, fresh_tokens = cache_cutfresh(cache_dic, x_guide, current)
-            fresh_tokens = self.mlp(modulate(self.norm2(fresh_tokens), shift_mlp, scale_mlp))
+            fresh_tokens = self.mlp(modulate(self.norm2(fresh_tokens), shift_mlp[len(shift_mlp) // 2: ], scale_mlp[len(scale_mlp) // 2: ]))
             update_cache(fresh_indices, fresh_tokens=fresh_tokens, cache_dic=cache_dic, current=current)
 
-            mlp_output_original = self.mlp(modulate(self.norm2(x_original), shift_mlp, scale_mlp))
+            mlp_output_original = self.mlp(modulate(self.norm2(x_original), shift_mlp[:len(shift_mlp) // 2], scale_mlp[: len(scale_mlp) // 2]))
 
-            x_original = x_original + gate_msa.unsqueeze(1) * mlp_output_original
-            x_guide = x_guide + gate_msa.unsqueeze(1) * cache_dic['cache'][-1][layer]['mlp']
+            x_original = x_original + gate_mlp[:len(gate_mlp)//2].unsqueeze(1) * mlp_output_original
+            x_guide = x_guide + gate_mlp[len(gate_mlp)//2:].unsqueeze(1) * cache_dic['cache'][-1][layer]['mlp']
 
             #x = x + cache_dic['cache'][-1][layer]['mlp']
 
@@ -345,7 +345,7 @@ class DiTBlock(nn.Module):
                 current['module'] = 'attn'
                 attn_output, attn_map = self.attn(modulate(self.norm1(x), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
                 cache_dic['cache'][-1][layer]['attn'] = attn_output
-                cache_dic['attn_map'][-1][layer] = attn_map
+                # cache_dic['attn_map'][-1][layer] = attn_map
                 x = x + gate_msa.unsqueeze(1) * attn_output
 
                 current['module'] = 'mlp'
@@ -364,10 +364,11 @@ class DiTBlock(nn.Module):
                 x = cache_dic['cache'][-1]['x_base'] + cache_dic['cache'][-1]['res']
         
         else:
-            print("Module Skipp called")
+            # print("Module Skipp called")
             current['module'] = 'skipped'
             if current['layer'] == 27:
                 x = cache_dic['cache'][-1]['noise']
+                x_original, x_guide = torch.split(x, len(x) // 2, dim=0)
 
         cache_dic['flops'] += flops
 
