@@ -208,8 +208,6 @@ class DiTBlock(nn.Module):
         x_original = x[: len(x) // 2]
         x_guide = x[len(x) // 2:]
 
-        # current['type'] = 'full'
-
         if current['type'] == 'full':  # Force Activation: Compute all tokens and save them in cache
             
             if cache_dic['res_enable'] and (current['layer'] == cache_dic['residual_start']):
@@ -249,6 +247,8 @@ class DiTBlock(nn.Module):
 
             x_original = x[: len(x) // 2]
             x_guide = x[len(x) // 2:]
+
+            cache_dic['cache'][-1]['full_skip'] = x
 
             # MLP FLOPs
             if test_FLOPs:
@@ -371,6 +371,12 @@ class DiTBlock(nn.Module):
             if current['layer'] == cache_dic['residual_end']:
                 x = cache_dic['cache'][-1]['x_base'] + cache_dic['cache'][-1]['res']
         
+        elif current['type'] == 'skipped':
+            x = cache_dic['cache'][-1]['full_skip']
+            x_original, x_guide = torch.split(x, len(x) // 2, dim=0)
+            # if current['layer'] == 27:
+            #     x = cache_dic['cache'][-1]['noise']
+            #     x_original, x_guide = torch.split(x, len(x) // 2, dim=0)
         else:
             # print("Module Skipp called")
             shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
