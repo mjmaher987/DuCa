@@ -208,7 +208,7 @@ class DiTBlock(nn.Module):
         x_original = x[: len(x) // 2]
         x_guide = x[len(x) // 2:]
 
-        current['type'] = 'full'
+        # current['type'] = 'full'
 
         if current['type'] == 'full':  # Force Activation: Compute all tokens and save them in cache
             
