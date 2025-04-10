@@ -29,9 +29,9 @@ def cache_init(model_kwargs, num_steps):
     cache_dic['flops']                = 0.0
     cache_dic['test_FLOPs']           = model_kwargs['test_FLOPs'] 
 
-    cache_dic['f'] = model_kwargs['f']
-    cache_dic['t'] = model_kwargs['t']
-    cache_dic['s'] = model_kwargs['s']
+    cache_dic['f_value'] = model_kwargs['f_value']
+    cache_dic['t_value'] = model_kwargs['t_value']
+    cache_dic['s_value'] = model_kwargs['s_value']
     
     cache_dic['cache'][-1]['noise_steps'] = {}
     

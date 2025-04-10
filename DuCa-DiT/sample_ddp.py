@@ -137,9 +137,9 @@ def main(args):
         model_kwargs['soft_fresh_weight'] = args.soft_fresh_weight
         model_kwargs['test_FLOPs']        = args.test_FLOPs
 
-        model_kwargs['f'] = args.f
-        model_kwargs['t'] = args.t
-        model_kwargs['s'] = args.s
+        model_kwargs['f_value'] = args.f
+        model_kwargs['t_value'] = args.t
+        model_kwargs['s_value'] = args.s
 
         # Sample images:
         if args.ddim_sample:
