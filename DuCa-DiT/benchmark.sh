@@ -1,6 +1,6 @@
 #! /bin/bash
 
-CONFIGS(
+CONFIGS=(
 # Without skipping
 # (f t s)
   (6 2 1)
