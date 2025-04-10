@@ -24,5 +24,5 @@ for config in "${CONFIGS[@]}"; do
   t=${params[1]}
   s=${params[2]}
   echo "Running with f=$f, t=$t, s=$s"
-  CUDA_VISIBLE_DEVICES=0 torchrun --nnodes=1 --nproc_per_node=1 --rdzv_endpoint=localhost:29502 sample_ddp.py --model DiT-XL/2 --num-fid-samples 3000 --per-proc-batch-size 32 --sample-dir samples-single-forward-f$f-t$t-s$s --test-FLOPs -f $f -t $t -s $s &> out-f$f-t$t-s$s.log
+  CUDA_VISIBLE_DEVICES=0 torchrun --nnodes=1 --nproc_per_node=1 --rdzv_endpoint=localhost:29502 sample_ddp.py --model DiT-XL/2 --num-fid-samples 5000 --per-proc-batch-size 128 --sample-dir samples-single-forward-f$f-t$t-s$s --test-FLOPs -f $f -t $t -s $s &> out-f$f-t$t-s$s.log
 done
