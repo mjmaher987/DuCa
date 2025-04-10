@@ -10,7 +10,7 @@ def cal_type(cache_dic, current):
     else:
         fresh_interval = cache_dic['fresh_threshold']
 
-    if (current['step'] % 6 == 0) or first_step:
+    if (current['step'] % 8 == 0) or first_step:
         current['type'] = 'full'
         
     elif (current['step'] % 2 == 1): #[1,3,5] [2,4,6]
