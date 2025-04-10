@@ -229,9 +229,13 @@ class DiTBlock(nn.Module):
 
             current['module'] = 'attn'
             attn_output, attn_map = self.attn(modulate(self.norm1(x), shift_msa, scale_msa), cache_dic=cache_dic, current=current)
+
             #cache_dic['cache'][-1][layer]['attn'] = attn_output * gate_msa.unsqueeze(1)
+
             cache_dic['cache'][-1][layer]['attn'] = attn_output[len(attn_output) // 2:]
+
             # cache_dic['attn_map'][-1][layer] = attn_map[len(attn_map) // 2:]
+
             force_init(cache_dic, current, x_guide)
             x = x + gate_msa.unsqueeze(1) * attn_output
 
@@ -240,6 +244,7 @@ class DiTBlock(nn.Module):
             #cache_dic['cache'][-1][layer]['mlp'] = mlp_output * gate_mlp.unsqueeze(1)
             cache_dic['cache'][-1][layer]['mlp'] = mlp_output[len(mlp_output) // 2:]
             force_init(cache_dic, current, x_guide)
+
             x = x + gate_mlp.unsqueeze(1) * mlp_output
 
             x_original = x[: len(x) // 2]
@@ -368,6 +373,28 @@ class DiTBlock(nn.Module):
         
         else:
             # print("Module Skipp called")
+            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(c).chunk(6, dim=1)
+            
+            # LayerNorm FLOPs (for both norm1 and norm2)
+            if test_FLOPs:
+                flops += 2 * B * N * C
+
+            # AdaLN FLOPs (SiLU and Linear)
+            if test_FLOPs:
+                flops += B * C  # SiLU FLOPs
+                flops += B * C * 6 * C  # Linear FLOPs in adaLN_modulation
+
+            current['module'] = 'attn'
+            attn_output_original, attn_map_original = self.attn(modulate(self.norm1(x_original), shift_msa[:len(shift_msa) // 2], scale_msa[:len(scale_msa) // 2]), cache_dic=cache_dic, current=current)
+
+            x_original = x_original + gate_msa[:len(gate_msa)//2].unsqueeze(1) * attn_output_original
+
+            current['module'] = 'mlp'
+
+            mlp_output_original = self.mlp(modulate(self.norm2(x_original), shift_mlp[:len(shift_mlp) // 2], scale_mlp[: len(scale_mlp) // 2]))
+
+            x_original = x_original + gate_mlp[:len(gate_mlp)//2].unsqueeze(1) * mlp_output_original
+ 
             current['module'] = 'skipped'
             if current['layer'] == 27:
                 x = cache_dic['cache'][-1]['noise']
