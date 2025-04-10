@@ -242,6 +242,9 @@ class DiTBlock(nn.Module):
             force_init(cache_dic, current, x_guide)
             x = x + gate_mlp.unsqueeze(1) * mlp_output
 
+            x_original = x[: len(x) // 2]
+            x_guide = x[len(x) // 2:]
+
             # MLP FLOPs
             if test_FLOPs:
                 mlp_hidden_dim = int(C * 4)  # Assuming mlp_ratio = 4
